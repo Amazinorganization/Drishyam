@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "DRISHYAM - Indian Video & Social Platform",
+  "short_name": "DRISHYAM",
+  "description": "India's premier video-sharing and social ecosystem for long-form videos, Shorts, stories, and creator community.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0B0F19",
+  "background_color": "#0B0F19",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["entertainment", "video", "social"]
+}

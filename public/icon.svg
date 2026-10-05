@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </linearGradient>
+    <linearGradient id="saffron-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF512F"/>
+      <stop offset="50%" stop-color="#DD2476"/>
+      <stop offset="100%" stop-color="#FFA000"/>
+    </linearGradient>
+    <linearGradient id="lens-accent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00F2FE"/>
+      <stop offset="100%" stop-color="#4FACFE"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Outer squircle background -->
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad)"/>
+  
+  <!-- Subtle circular grid / aperture guide lines -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" stroke-dasharray="6 6"/>
+  
+  <!-- Iris Aperture & Eye of Vision (Drishyam = Vision) -->
+  <g filter="url(#glow)">
+    <!-- Eye outline / D-profile curvature -->
+    <path d="M120 256 C 120 180, 180 120, 256 120 C 332 120, 392 180, 392 256 C 392 332, 332 392, 256 392 C 180 392, 120 332, 120 256 Z" 
+          fill="none" stroke="url(#saffron-gold)" stroke-width="20" stroke-linecap="round"/>
+          
+    <!-- Dynamic aperture blades representing cinema & shutter -->
+    <path d="M256 140 L330 200 L290 270 Z" fill="url(#saffron-gold)" opacity="0.9"/>
+    <path d="M372 256 L312 330 L242 290 Z" fill="url(#saffron-gold)" opacity="0.8"/>
+    <path d="M256 372 L182 312 L222 242 Z" fill="url(#saffron-gold)" opacity="0.9"/>
+    <path d="M140 256 L200 182 L270 222 Z" fill="url(#saffron-gold)" opacity="0.8"/>
+    
+    <!-- Central Pupil / Play Icon / Vision Lens -->
+    <circle cx="256" cy="256" r="56" fill="#0B0F19" stroke="url(#lens-accent)" stroke-width="6"/>
+    <!-- Triangular Play facet -->
+    <polygon points="244,236 244,276 280,256" fill="#FFFFFF"/>
+    
+    <!-- Subtle Golden Spark of Vision -->
+    <circle cx="340" cy="172" r="10" fill="#FFD700" opacity="0.9"/>
+  </g>
+</svg>

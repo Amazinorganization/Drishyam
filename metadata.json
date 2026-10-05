@@ -1,0 +1,6 @@
+{
+  "name": "DRISHYAM - Indian Video & Social Platform",
+  "description": "India's premier video-sharing and social ecosystem combining long-form videos, Shorts, stories, posts, and creator tools with a distinctive Indian digital identity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
