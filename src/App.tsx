@@ -137,7 +137,7 @@ function DrishyamAppContent() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(true);
 
   // Category Pills list
   const CATEGORIES: (VideoCategory | 'All')[] = [
@@ -577,9 +577,9 @@ function DrishyamAppContent() {
       />
 
       {/* AUTHENTICATION MODAL */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(true)}
+   <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(true)}
         onLoginSuccess={(loggedInUser) => {
           setCurrentUser(loggedInUser);
           setViewingProfileUser(loggedInUser);
