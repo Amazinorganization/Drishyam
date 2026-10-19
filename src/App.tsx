@@ -43,6 +43,7 @@ import { NotificationDrawer } from './components/notifications/NotificationDrawe
 import { SettingsModal } from './components/settings/SettingsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { AuthModal } from './components/auth/AuthModal';
+import { supabase } from './lib/supabase';
 
 function DrishyamAppContent() {
   const { theme, setTheme } = useTheme();
