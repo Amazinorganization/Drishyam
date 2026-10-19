@@ -48,6 +48,67 @@ import { supabase } from './lib/supabase';
 function DrishyamAppContent() {
   const { theme, setTheme } = useTheme();
   const { showToast } = useToast();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const restoreSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) throw error;
+
+        if (active && data.session?.user) {
+          const authUser = data.session.user;
+          const metadata = authUser.user_metadata || {};
+
+          const loggedInUser: UserProfile = {
+            ...StorageService.getCurrentUser(),
+            id: authUser.id,
+            name:
+              String(metadata.name || '').trim() ||
+              authUser.email?.split('@')[0] ||
+              'Drishyam User',
+            username:
+              String(metadata.username || '').trim() ||
+              authUser.email?.split('@')[0] ||
+              `user_${authUser.id.slice(0, 8)}`,
+            email: authUser.email || '',
+            isVerified: Boolean(authUser.email_confirmed_at),
+          };
+
+          StorageService.updateCurrentUser(loggedInUser);
+          StorageService.setLoggedIn(true);
+          setCurrentUser(loggedInUser);
+          setViewingProfileUser(loggedInUser);
+        } else if (active) {
+          StorageService.setLoggedIn(false);
+        }
+      } catch (error) {
+        console.error('Session restore failed:', error);
+      } finally {
+        if (active) setAuthChecked(true);
+      }
+    };
+
+    void restoreSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+
+      if (event === 'SIGNED_OUT' || !session) {
+        StorageService.setLoggedIn(false);
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // App Loading / Splash State
   const [showSplash, setShowSplash] = useState(true);
