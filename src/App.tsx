@@ -579,7 +579,7 @@ function DrishyamAppContent() {
       {/* AUTHENTICATION MODAL */}
       <AuthModal
         isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={() => setIsAuthOpen(true)}
         onLoginSuccess={(loggedInUser) => {
           setCurrentUser(loggedInUser);
           setViewingProfileUser(loggedInUser);
