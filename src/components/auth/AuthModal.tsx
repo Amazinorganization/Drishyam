@@ -86,7 +86,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       totalShorts: 0,
       totalPosts: 0,
       joinedDate: new Date().toLocaleDateString('en-IN'),
-      isVerified: authUser.email ? true : false,
+      isVerified: Boolean(authUser.email_confirmed_at),
       isCreator: false,
       role: 'user',
       isPrivate: false,
@@ -165,16 +165,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            name: name.trim(),
-            username: cleanUsername,
-          },
-        },
-      });
-
+  email: email.trim(),
+  password,
+  options: {
+    emailRedirectTo: 'https://github.com/Amazinorganization/Drishyam',
+    data: {
+      name: name.trim(),
+      username: cleanUsername,
+    },
+  },
+});
       if (error) throw error;
 
       if (data.session && data.user) {
