@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, Lock, User, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import {
+  X,
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  Mail,
+  Loader2,
+  ArrowLeft,
+  ShieldCheck,
+} from 'lucide-react';
+
 import { DrishyamLogo } from '../brand/DrishyamLogo';
 import { StorageService } from '../../services/storage';
-import { CREATORS } from '../../data/seedData';
 import { useToast } from '../common/Toast';
 import { UserProfile } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -12,324 +23,466 @@ interface AuthModalProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [isSignup, setIsSignup] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+type AuthMode = 'login' | 'signup' | 'forgot';
 
-  // Form Fields
+export const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  onLoginSuccess,
+}) => {
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
 
   const { showToast } = useToast();
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const cleanUsername = username.trim().replace(/^@/, '');
+
+  const resetForm = () => {
+    setName('');
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+  };
+
+  const finishLogin = async (
+    authUser: {
+      id: string;
+      email?: string;
+      user_metadata?: Record<string, unknown>;
+    }
+  ) => {
+    const metadata = authUser.user_metadata || {};
+
+    const savedUser: UserProfile = {
+      id: authUser.id,
+      name:
+        String(metadata.name || '').trim() ||
+        authUser.email?.split('@')[0] ||
+        'Drishyam User',
+      username:
+        String(metadata.username || '').trim() ||
+        authUser.email?.split('@')[0] ||
+        `user_${authUser.id.slice(0, 8)}`,
+      email: authUser.email || '',
+      avatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      coverImage:
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200',
+      bio: 'New explorer & creator on DRISHYAM 🇮🇳',
+      followersCount: 0,
+      followingCount: 0,
+      totalVideos: 0,
+      totalShorts: 0,
+      totalPosts: 0,
+      joinedDate: new Date().toLocaleDateString('en-IN'),
+      isVerified: authUser.email ? true : false,
+      isCreator: false,
+      role: 'user',
+      isPrivate: false,
+      links: {},
+    };
+
+    StorageService.updateCurrentUser(savedUser);
+    StorageService.setLoggedIn(true);
+
+    onLoginSuccess(savedUser);
+    onClose();
+    resetForm();
+  };
+
+   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password) {
-      showToast('Please enter both username and password', 'error');
+
+    if (!email.trim() || !password) {
+      showToast('Please enter your email and password.', 'error');
       return;
     }
 
-    // Check if matching creator in demo or current user
-    const foundCreator = CREATORS.find(
-      (c) => c.username.toLowerCase() === username.trim().toLowerCase()
-    );
+    setLoading(true);
 
-    const userToLogin = foundCreator || {
-      ...StorageService.getCurrentUser(),
-      username: username.trim().replace(/^@/, '')
-    };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    StorageService.updateCurrentUser(userToLogin);
-    StorageService.setLoggedIn(true);
-    showToast(`Welcome back to DRISHYAM, ${userToLogin.name}! 🇮🇳`, 'success');
-    onLoginSuccess(userToLogin);
-    onClose();
+      if (error) throw error;
+
+      if (!data.user) {
+        showToast('Login failed. Please try again.', 'error');
+        return;
+      }
+
+      await finishLogin(data.user);
+      showToast('Welcome back to DRISHYAM!', 'success');
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to sign in.';
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !username.trim() || !password) {
-      showToast('Please fill out all required fields', 'error');
+
+    if (!name.trim() || !cleanUsername || !email.trim() || !password) {
+      showToast('Please fill in all fields.', 'error');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
+      showToast(
+        'Username must be 3–20 characters and contain only letters, numbers, or underscores.',
+        'error'
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      showToast('Password must contain at least 6 characters.', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      showToast('Passwords do not match', 'error');
+      showToast('Passwords do not match.', 'error');
       return;
     }
 
-    const newUser: UserProfile = {
-      id: `user_${Date.now()}`,
-      name: name.trim(),
-      username: username.trim().replace(/^@/, ''),
-      email: email.trim() || `${username.trim()}@drishyam.in`,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200',
-      bio: 'New explorer & creator on DRISHYAM 🇮🇳',
-      followersCount: 1,
-      followingCount: 3,
-      totalVideos: 0,
-      totalShorts: 0,
-      totalPosts: 0,
-      joinedDate: 'Joined Today',
-      isVerified: false,
-      isCreator: false,
-      role: 'user',
-      isPrivate: false,
-      links: {}
-    };
+    setLoading(true);
 
-    StorageService.updateCurrentUser(newUser);
-    StorageService.setLoggedIn(true);
-    showToast(`Account created! Welcome to DRISHYAM, ${newUser.name}!`, 'success');
-    onLoginSuccess(newUser);
-    onClose();
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            name: name.trim(),
+            username: cleanUsername,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.session && data.user) {
+        await finishLogin(data.user);
+        showToast('Your DRISHYAM account has been created!', 'success');
+      } else {
+        showToast(
+          'Account created! Please verify your email, then return and sign in.',
+          'success'
+        );
+        setMode('login');
+        setPassword('');
+        setConfirmPassword('');
+      }
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to create account.';
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleQuickDemoSwitch = (creator: UserProfile) => {
-    StorageService.updateCurrentUser(creator);
-    StorageService.setLoggedIn(true);
-    showToast(`Switched account to ${creator.name} (@${creator.username})`, 'success');
-    onLoginSuccess(creator);
-    onClose();
-  };
-
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    showToast('Password reset link simulated: Please check your inbox', 'info');
-    setShowForgotPassword(false);
+
+    if (!email.trim()) {
+      showToast('Please enter your registered email address.', 'error');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: 'https://localhost',
+        }
+      );
+
+      if (error) throw error;
+
+      showToast(
+        'If this email is registered, a password reset email will be sent.',
+        'success'
+      );
+      setMode('login');
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to send reset email.';
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeMode = (newMode: AuthMode) => {
+    setMode(newMode);
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 select-none">
-      <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border border-slate-800 text-slate-100 shadow-2xl p-6 sm:p-7 flex flex-col">
-        {/* Close Button */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border border-slate-800 text-slate-100 shadow-2xl p-6 sm:p-7 flex flex-col max-h-[95vh] overflow-y-auto">
         <button
+          type="button"
           onClick={onClose}
+          disabled={loading}
+          aria-label="Close"
           className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-white"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Brand Header */}
         <div className="flex flex-col items-center text-center space-y-2 mb-6">
           <DrishyamLogo size="lg" showText={false} />
+
           <h2 className="font-brand text-2xl font-bold text-white tracking-tight">
-            {showForgotPassword
+            {mode === 'forgot'
               ? 'Reset Your Password'
-              : isSignup
-              ? 'Join DRISHYAM Bharat'
-              : 'Sign In to DRISHYAM'}
+              : mode === 'signup'
+                ? 'Join DRISHYAM Bharat'
+                : 'Sign In to DRISHYAM'}
           </h2>
+
           <p className="text-xs text-slate-400">
-            {showForgotPassword
-              ? 'Enter your email or phone to receive a recovery token'
-              : isSignup
-              ? 'Create a creator or viewer account in seconds'
-              : 'Access your watch history, subscriptions, and studio'}
+            {mode === 'forgot'
+              ? 'Enter your registered email address.'
+              : mode === 'signup'
+                ? 'Create your account and join the community.'
+                : 'Sign in with your registered email and password.'}
           </p>
         </div>
 
-        {/* FORGOT PASSWORD FORM */}
-        {showForgotPassword ? (
-          <form onSubmit={handleForgotSubmit} className="space-y-4 text-xs">
+        {mode === 'forgot' ? (
+          <form onSubmit={handleForgotPassword} className="space-y-4 text-xs">
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300">Registered Email or Username</label>
-              <input
-                type="text"
-                required
-                placeholder="aarav@drishyam.in"
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-500"
-              />
+              <label className="font-semibold text-slate-300">
+                Email Address
+              </label>
+
+              <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
+                <Mail className="w-4 h-4 text-slate-500 shrink-0" />
+
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full py-3 px-2 bg-transparent text-white focus:outline-none"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold transition"
             >
-              Send Reset Link
+              {loading ? 'Sending...' : 'Send Reset Link'}
             </button>
 
             <button
               type="button"
-              onClick={() => setShowForgotPassword(false)}
-              className="w-full text-center text-xs text-slate-400 hover:text-white"
+              onClick={() => changeMode('login')}
+              className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-white"
             >
+              <ArrowLeft className="w-4 h-4" />
               Back to Login
             </button>
           </form>
         ) : (
-          /* LOGIN OR SIGNUP FORM */
-          <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-3.5 text-xs">
-            {isSignup && (
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Full Name</label>
-                <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
-                  <User className="w-4 h-4 text-slate-500 shrink-0" />
-                  <input
-                    id="signupName"
-                    type="text"
-                    required
-                    placeholder="e.g., Aarav Sharma"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full py-2.5 px-2 bg-transparent text-white focus:outline-none"
-                  />
+          <form
+            onSubmit={mode === 'signup' ? handleSignup : handleLogin}
+            className="space-y-3.5 text-xs"
+          >
+            {mode === 'signup' && (
+              <>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">
+                    Full Name
+                  </label>
+
+                  <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
+                    <User className="w-4 h-4 text-slate-500 shrink-0" />
+
+                    <input
+                      type="text"
+                      required
+                      autoComplete="name"
+                      placeholder="Your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full py-3 px-2 bg-transparent text-white focus:outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">
+                    Username
+                  </label>
+
+                  <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
+                    <span className="text-slate-500">@</span>
+
+                    <input
+                      type="text"
+                      required
+                      autoComplete="username"
+                      placeholder="your_username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full py-3 px-2 bg-transparent text-white focus:outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300">Username</label>
+              <label className="font-semibold text-slate-300">
+                Email Address
+              </label>
+
               <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
-                <span className="text-slate-500 font-mono">@</span>
+                <Mail className="w-4 h-4 text-slate-500 shrink-0" />
+
                 <input
-                  id={isSignup ? 'signupUsername' : 'loginUsername'}
-                  type="text"
+                  type="email"
                   required
-                  placeholder="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full py-2.5 px-2 bg-transparent text-white focus:outline-none font-mono"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full py-3 px-2 bg-transparent text-white focus:outline-none"
                 />
               </div>
             </div>
 
-            {isSignup && (
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Email Address</label>
-                <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
-                  <Mail className="w-4 h-4 text-slate-500 shrink-0" />
-                  <input
-                    type="email"
-                    placeholder="you@domain.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full py-2.5 px-2 bg-transparent text-white focus:outline-none"
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label className="font-semibold text-slate-300">Password</label>
-                {!isSignup && (
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotPassword(true)}
-                    className="text-[11px] text-amber-400 hover:underline"
-                  >
-                    Forgot?
-                  </button>
-                )}
-              </div>
+              <label className="font-semibold text-slate-300">
+                Password
+              </label>
+
               <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
                 <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+
                 <input
-                  id={isSignup ? 'signupPassword' : 'loginPassword'}
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="••••••••"
+                  autoComplete={
+                    mode === 'signup' ? 'new-password' : 'current-password'
+                  }
+                  placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full py-2.5 px-2 bg-transparent text-white focus:outline-none"
+                  className="w-full py-3 px-2 bg-transparent text-white focus:outline-none"
                 />
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="text-slate-400 hover:text-white p-1"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
 
-            {isSignup && (
+            {mode === 'signup' && (
               <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Confirm Password</label>
+                <label className="font-semibold text-slate-300">
+                  Confirm Password
+                </label>
+
                 <div className="flex items-center px-3 rounded-xl bg-slate-950 border border-slate-700 focus-within:border-amber-500">
-                  <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" />
+
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    placeholder="Repeat your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full py-2.5 px-2 bg-transparent text-white focus:outline-none"
+                    className="w-full py-3 px-2 bg-transparent text-white focus:outline-none"
                   />
                 </div>
               </div>
             )}
 
-            {!isSignup && (
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="rememberSession"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="rememberSession" className="text-slate-400 text-xs cursor-pointer">
-                  Remember this device session
-                </label>
+            {mode === 'login' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => changeMode('forgot')}
+                  className="text-[11px] text-amber-400 hover:underline"
+                >
+                  Forgot Password?
+                </button>
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition active:scale-98 mt-2"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition"
             >
-              {isSignup ? 'Create DRISHYAM Account' : 'Sign In'}
+              {loading
+                ? 'Please wait...'
+                : mode === 'signup'
+                  ? 'Create DRISHYAM Account'
+                  : 'Sign In'}
             </button>
 
-            {/* Toggle Login / Signup */}
             <div className="pt-2 text-center text-xs text-slate-400">
-              {isSignup ? 'Already have an account? ' : "Don't have an account yet? "}
+              {mode === 'signup'
+                ? 'Already have an account? '
+                : "Don't have an account yet? "}
+
               <button
                 type="button"
-                onClick={() => setIsSignup(!isSignup)}
+                onClick={() =>
+                  changeMode(mode === 'signup' ? 'login' : 'signup')
+                }
                 className="font-bold text-amber-400 hover:underline"
               >
-                {isSignup ? 'Sign In' : 'Sign Up Free'}
+                {mode === 'signup' ? 'Sign In' : 'Sign Up Free'}
               </button>
             </div>
           </form>
         )}
 
-        {/* 1-Tap Quick Switch Demo Accounts (For easy phone testing) */}
-        <div className="mt-5 pt-4 border-t border-slate-800 space-y-2">
-          <p className="text-[11px] font-semibold text-slate-400 text-center">
-            Or test instantly with pre-loaded creator profiles:
+        <div className="mt-5 pt-4 border-t border-slate-800 text-center">
+          <p className="text-[11px] text-slate-500">
+            Your account is protected by Supabase Authentication.
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            {CREATORS.slice(0, 4).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => handleQuickDemoSwitch(c)}
-                className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-800 transition text-left"
-              >
-                <img
-                  src={c.avatar}
-                  alt={c.name}
-                  className="w-7 h-7 rounded-full object-cover shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="font-semibold text-white truncate text-[11px]">{c.name.split(' ')[0]}</p>
-                  <p className="text-[9px] text-slate-400 font-mono truncate">@{c.username}</p>
-                </div>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </div>
