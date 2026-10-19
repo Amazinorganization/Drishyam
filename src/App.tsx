@@ -493,10 +493,20 @@ function DrishyamAppContent() {
         onClose={() => setIsSettingsOpen(false)}
         currentTheme={theme}
         onThemeChange={(newTheme) => setTheme(newTheme)}
-        onLogout={() => {
-          setIsSettingsOpen(false);
-          setIsAuthOpen(true);
-        }}
+        onLogout={async () => {
+           setIsSettingsOpen(false);
+
+            const { error } = await supabase.auth.signOut();
+
+             if (error) {
+                showToast('Logout failed: ' + error.message,         'error');
+                return;
+            }
+
+            StorageService.setLoggedIn(false);
+            setIsAuthOpen(true);
+            showToast('You have been signed out.', 'success');
+   }}
       />
 
       {/* ADMIN & TRUST MODERATION PANEL */}
