@@ -578,14 +578,18 @@ function DrishyamAppContent() {
 
       {/* AUTHENTICATION MODAL */}
    <AuthModal
-          isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(true)}
-        onLoginSuccess={(loggedInUser) => {
-          setCurrentUser(loggedInUser);
-          setViewingProfileUser(loggedInUser);
-          refreshData();
-        }}
-      />
+         isOpen={!authChecked || isAuthOpen}
+         onClose={() => setIsAuthOpen(true)}
+         onLoginSuccess={(loggedInUser) => {
+         StorageService.updateCurrentUser(loggedInUser);
+         StorageService.setLoggedIn(true);
+         setCurrentUser(loggedInUser);
+         setViewingProfileUser(loggedInUser);
+         setIsAuthOpen(false);
+         setAuthChecked(true);
+         refreshData();
+  }}
+/>
     </div>
   );
 }
