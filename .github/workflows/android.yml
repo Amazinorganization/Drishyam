@@ -39,6 +39,53 @@ jobs:
 
       - name: Sync Android project
         run: npx cap sync android
+    
+      - name: Configure Drishyam Deep Link
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          if not manifest.exists():
+              raise SystemExit("AndroidManifest.xml not found")
+
+          tree = ET.parse(manifest)
+          root = tree.getroot()
+
+          android = "{http://schemas.android.com/apk/res/android}"
+          app = root.find("application")
+          if app is None:
+              raise SystemExit("Android application element not found")
+
+          activity = next(
+              (
+                  item for item in app.findall("activity")
+                  if item.get(android + "name", "").endswith("MainActivity")
+              ),
+              None,
+          )
+          if activity is None:
+              raise SystemExit("MainActivity not found")
+
+          for item in activity.findall("intent-filter"):
+              data = item.find("data")
+              if data is not None and data.get(android + "scheme") == "com.drishyam.app":
+                  print("Deep link already configured.")
+                  break
+          else:
+              intent = ET.SubElement(activity, "intent-filter")
+              ET.SubElement(intent, "action", {android + "name": "android.intent.action.VIEW"})
+              ET.SubElement(intent, "category", {android + "name": "android.intent.category.DEFAULT"})
+              ET.SubElement(intent, "category", {android + "name": "android.intent.category.BROWSABLE"})
+              ET.SubElement(intent, "data", {
+                  android + "scheme": "com.drishyam.app",
+                  android + "host": "login-callback",
+              })
+              tree.write(manifest, encoding="utf-8", xml_declaration=True)
+              print("Drishyam Deep Link configured.")
+          PY
               
       - name: Build debug APK
         run: |
