@@ -41,6 +41,27 @@ jobs:
 
       - name: Sync Android project
         run: npx cap sync android
+      
+      - name: Configure Drishyam App Icon
+        run: |
+          mkdir -p resources
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+
+          source = Path("drishyam-icon-1024.png")
+          resources = Path("resources")
+          resources.mkdir(parents=True, exist_ok=True)
+
+          if not source.exists():
+              raise SystemExit("ERROR: drishyam-icon-1024.png not found in repository root")
+
+          shutil.copy2(source, resources / "icon.png")
+          print("Drishyam icon copied successfully.")
+          PY
+
+          npm install @capacitor/assets --save-dev
+          npx capacitor-assets generate --android
     
       - name: Configure Drishyam Deep Link
         shell: bash
