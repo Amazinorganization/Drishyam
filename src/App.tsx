@@ -82,6 +82,8 @@ function DrishyamAppContent() {
           StorageService.setLoggedIn(true);
           setCurrentUser(loggedInUser);
           setViewingProfileUser(loggedInUser);
+          setIsAuthOpen(false);
+          StorageService.setLoggedIn(true);
         } else if (active) {
           StorageService.setLoggedIn(false);
         }
