@@ -39,6 +39,34 @@ jobs:
 
       - name: Sync Android project
         run: npx cap sync android
+              - name: Configure Android Deep Links
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+
+          marker = 'android:scheme="com.drishyam.app"'
+          if marker not in content:
+              intent_filter = '''
+                      <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="com.drishyam.app" android:host="login-callback" />
+                      </intent-filter>
+              '''
+
+              activity_end = content.find('</activity>')
+              if activity_end == -1:
+                  raise SystemExit("Could not find MainActivity in AndroidManifest.xml")
+
+              content = content[:activity_end] + intent_filter + content[activity_end:]
+              manifest.write_text(content)
+
+          print("Deep Link configured successfully")
+          PY
 
       - name: Build debug APK
         run: |
