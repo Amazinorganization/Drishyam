@@ -20,7 +20,9 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install @capacitor/app@^7.0.0
 
       - name: Build web app
         run: npm run build
