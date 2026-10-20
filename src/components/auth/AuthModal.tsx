@@ -168,7 +168,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   email: email.trim(),
   password,
   options: {
-    emailRedirectTo: window.location.origin;
+    emailRedirectTo:'com.drishyam.app://login-callback'‚
     data: {
       name: name.trim(),
       username: cleanUsername,
@@ -212,7 +212,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: window.location.origin,
+          redirectTo: 'com.drishyam.app://login-callback',
         }
       );
 
