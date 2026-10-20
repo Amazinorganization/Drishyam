@@ -168,7 +168,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   email: email.trim(),
   password,
   options: {
-    emailRedirectTo:'com.drishyam.app://login-callback'‚
+    emailRedirectTo: 'com.drishyam.app://login-callback',
     data: {
       name: name.trim(),
       username: cleanUsername,
