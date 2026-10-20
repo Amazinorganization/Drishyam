@@ -49,12 +49,12 @@ jobs:
           from pathlib import Path
           import shutil
 
-          source = Path("drishyam-icon-1024.png")
+          source = Path("drishyam-icon-1024-1.png")
           resources = Path("resources")
           resources.mkdir(parents=True, exist_ok=True)
 
           if not source.exists():
-              raise SystemExit("ERROR: drishyam-icon-1024.png not found in repository root")
+              raise SystemExit("ERROR: drishyam-icon-1024-1.png not found in repository root")
 
           shutil.copy2(source, resources / "icon.png")
           print("Drishyam icon copied successfully.")
