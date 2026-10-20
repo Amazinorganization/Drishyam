@@ -78,9 +78,10 @@ export const StorageService = {
   },
 
   isLoggedIn(): boolean {
-    const status = localStorage.getItem(STORAGE_KEYS.LOGGED_IN);
-    return status === null ? true : status === 'true'; // Default true for seamless prototype experience
-  },
+  const status = localStorage.getItem(STORAGE_KEYS.LOGGED_IN);
+  return status === 'true';
+},
+    
 
   setLoggedIn(status: boolean): void {
     localStorage.setItem(STORAGE_KEYS.LOGGED_IN, status ? 'true' : 'false');
