@@ -32,7 +32,7 @@ jobs:
           java-version: 21
 
       - name: Install Capacitor Android tools
-        run: npm install @capacitor/android@^7.4.3 @capacitor/core@^7.4.3 @capacitor/cli@^7.4.3
+        run: npm install @capacitor/android@^7.4.3 @capacitor/core@^7.4.3 @capacitor/cli@^7.4.3 @capacitor/app@^7.0.0
 
       - name: Add Android platform
         run: npx cap add android
