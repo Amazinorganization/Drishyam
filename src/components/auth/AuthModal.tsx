@@ -212,7 +212,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: 'https://localhost',
+          redirectTo: window.location.origin,
         }
       );
 
