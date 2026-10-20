@@ -44,12 +44,75 @@ import { SettingsModal } from './components/settings/SettingsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { AuthModal } from './components/auth/AuthModal';
 import { supabase } from './lib/supabase';
+import { App as CapacitorApp } from '@capacitor/app';
 
 function DrishyamAppContent() {
   const { theme, setTheme } = useTheme();
   const { showToast } = useToast();
   const [authChecked, setAuthChecked] = useState(false);
+  
+    // Handle Supabase password-reset deep links
+  useEffect(() => {
+    let active = true;
 
+    const handleDeepLink = async (url: string) => {
+      try {
+        const parsedUrl = new URL(url);
+
+        if (parsedUrl.hostname !== 'login-callback') return;
+
+        const params = new URLSearchParams(
+          parsedUrl.hash.startsWith('#')
+            ? parsedUrl.hash.slice(1)
+            : parsedUrl.hash
+        );
+
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+        const errorDescription = params.get('error_description');
+
+        if (errorDescription) {
+          console.error('Password reset link error:', errorDescription);
+          return;
+        }
+
+        if (type === 'recovery' && accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (error) throw error;
+
+          if (active) {
+            setIsAuthOpen(true);
+          }
+        }
+      } catch (error) {
+        console.error('Deep link handling failed:', error);
+      }
+    };
+
+    const listenerPromise = CapacitorApp.addListener(
+      'appUrlOpen',
+      ({ url }) => {
+        void handleDeepLink(url);
+      }
+    );
+
+    void CapacitorApp.getLaunchUrl().then((result) => {
+      if (active && result?.url) {
+        void handleDeepLink(result.url);
+      }
+    });
+
+    return () => {
+      active = false;
+      void listenerPromise.then((listener) => listener.remove());
+    };
+  }, []);
+  
   useEffect(() => {
     let active = true;
 
